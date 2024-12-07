@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lyrics Lookup</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .search-container {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        input[type="text"] {
+            width: 60%;
+            padding: 12px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            margin-right: 10px;
+        }
+
+        button {
+            padding: 12px 24px;
+            font-size: 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+
+        #results {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            white-space: pre-wrap;
+        }
+
+        .loading {
+            text-align: center;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .loading::after {
+            content: "Loading...";
+            animation: dots 1.5s infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: "Loading."; }
+            40% { content: "Loading.."; }
+            60% { content: "Loading..."; }
+            80%, 100% { content: "Loading...."; }
+        }
+
+        .error {
+            color: #d32f2f;
+            text-align: center;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .metadata {
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .lyrics {
+            line-height: 1.6;
+        }
+
+        .source {
+            margin-top: 20px;
+            color: #666;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎵 Lyrics Lookup</h1>
+    
+    <div class="search-container">
+        <input type="text" id="searchInput" placeholder="Enter song name or lyrics..." />
+        <button onclick="searchLyrics()">Search</button>
+    </div>
+
+    <div class="loading" id="loading"></div>
+    <div class="error" id="error"></div>
+    <div id="results"></div>
+
+    <script>
+        const searchInput = document.getElementById('searchInput');
+        const loading = document.getElementById('loading');
+        const error = document.getElementById('error');
+        const results = document.getElementById('results');
+
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                searchLyrics();
+            }
+        });
+
+        async function searchLyrics() {
+            const query = searchInput.value.trim();
+            if (!query) {
+                showError('Please enter a song to search for');
+                return;
+            }
+
+            showLoading();
+            try {
+                const response = await fetch('/api/lyrics', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ query })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch lyrics');
+                }
+
+                const data = await response.json();
+                displayResults(data);
+            } catch (err) {
+                showError('Error fetching lyrics. Please try again.');
+                console.error('Error:', err);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function displayResults(data) {
+            error.style.display = 'none';
+            results.innerHTML = '';
+
+            if (!data || data.length === 0) {
+                showError('No lyrics found');
+                return;
+            }
+
+            // Process each part of the response
+            data.forEach(part => {
+                if (part.startsWith('🎵')) {
+                    // Metadata section
+                    const metadataDiv = document.createElement('div');
+                    metadataDiv.className = 'metadata';
+                    metadataDiv.textContent = part;
+                    results.appendChild(metadataDiv);
+                } else if (part.startsWith('🔗')) {
+                    // Source link section
+                    const sourceDiv = document.createElement('div');
+                    sourceDiv.className = 'source';
+                    sourceDiv.textContent = part;
+                    results.appendChild(sourceDiv);
+                } else {
+                    // Lyrics section
+                    const lyricsDiv = document.createElement('div');
+                    lyricsDiv.className = 'lyrics';
+                    lyricsDiv.textContent = part;
+                    results.appendChild(lyricsDiv);
+                }
+            });
+        }
+
+        function showLoading() {
+            loading.style.display = 'block';
+            error.style.display = 'none';
+            results.innerHTML = '';
+        }
+
+        function hideLoading() {
+            loading.style.display = 'none';
+        }
+
+        function showError(message) {
+            error.textContent = message;
+            error.style.display = 'block';
+            results.innerHTML = '';
+        }
+    </script>
+</body>
+</html>
