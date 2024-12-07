@@ -113,7 +113,7 @@ Core Objectives:
    - Handle partial or fragmented queries
 
 2. Context-Aware Query Enhancement
-   - Leverage surrounding context
+   - Leverage surrounding context, including lyrics if provided
    - Identify potential genre, era, or mood hints
    - Disambiguate between similar song titles
 
@@ -129,7 +129,7 @@ Output Requirements:
                     },
                     {
                         role: "user",
-                        content: `Query: ${this.parseXMLTags(query)}\nContext from recent messages:\n${this.parseXMLTags(context)}`
+                        content: `Query: ${this.parseXMLTags(query)}\nContext from recent messages:\n${this.parseXMLTags(context)}\n\n${context.includes('[') && context.includes(']') ? 'The context provided includes lyrics. Please use them to refine the query.' : ''}`
                     }
                 ]
             });
@@ -142,7 +142,7 @@ Output Requirements:
         }
     }
 
-    private async recallLyricsFromMemory(query: string): Promise<string | null> {
+    private async recallLyricsFromMemory(query: string, enhancedQuery?: string): Promise<string | null> {
         try {
             console.log('Attempting lyrics recall from memory:', query);
             const completion = await this.openai.chat.completions.create({
@@ -165,6 +165,7 @@ Guidelines:
 - If full lyrics are unavailable, provide most memorable sections to you with complete accuracy.
 - If full lyrics are unavailable, provide direct links in markdown formatting to sources that may have it. 
 - Ensure lyrics match the specific version/recording
+- Consider using the enhanced query for better recall if provided
 
 - Include section headers (Verse, Chorus, Bridge)
 
@@ -178,7 +179,7 @@ Output Format:
                     },
                     {
                         role: "user",
-                        content: `Please recall the complete lyrics for: ${query}`
+                        content: `Please recall the complete lyrics for: ${query}${enhancedQuery ? `\nEnhanced query: ${enhancedQuery}` : ''}`
                     }
                 ]
             });
@@ -246,7 +247,7 @@ Output Format:
 
             // Stage 3: Memory Recall with LLM
             console.log('Attempting memory recall stage...');
-            const memoryLyrics = await this.recallLyricsFromMemory(enhancedQuery);
+            const memoryLyrics = await this.recallLyricsFromMemory(enhancedQuery, enhancedQuery);
 
             if (memoryLyrics) {
                 const response = [];
@@ -269,8 +270,23 @@ When lyrics cannot be found, provide a strategic, user-empowering response:
 
 Objectives:
 1. Diagnose Search Failure
+   - Analyze why the search might have failed (e.g., ambiguous query, rare song, incorrect context)
+   - Provide specific reasons for the failure if possible
+
 2. Offer Precise Guidance
+   - Suggest actionable steps to refine the search
+   - Provide examples of alternative query formulations
+   - Recommend checking for common misspellings or variations
+
 3. Suggest Alternative Approaches
+   - Propose using different search strategies (e.g., searching by artist, album, or partial lyrics)
+   - Recommend exploring alternative sources or databases
+   - Offer to try a different search engine or platform
+
+4. Provide Contextual Insights (Optional)
+   - If possible, offer genre-specific or era-specific search tips
+   - Suggest related artists or songs that might help narrow down the search
+   - Provide any relevant information that could aid in the search
 
 Response Components:
 - Concise explanation of search limitations
@@ -279,7 +295,7 @@ Response Components:
                     },
                     {
                         role: "user",
-                        content: `Could not find lyrics for: ${cleanSearchTerm}\nContext: ${cleanContext || 'No context provided'}`
+                        content: `Could not find lyrics for: ${cleanSearchTerm}\nContext: ${cleanContext || 'No context provided'}\nEnhanced Query: ${enhancedQuery}`
                     }
                 ]
             });
