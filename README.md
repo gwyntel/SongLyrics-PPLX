@@ -1,3 +1,5 @@
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/gwyntel/SongLyrics-PPLX)
+
 # SongLyrics Project
 
 A TypeScript-based lyrics search service using Genius API and AI-powered enhancements.
